@@ -16,5 +16,11 @@ class Settings:
 
     FRONTEND_ORIGIN: str = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
 
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "change_this_secret_key")
+    JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
+        os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+    )
+
 
 settings = Settings()
