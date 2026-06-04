@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class EmployeeResponse(BaseModel):
@@ -15,3 +15,11 @@ class EmployeeResponse(BaseModel):
     updated_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
+
+class EmployeeCreateRequest(BaseModel):
+    employee_code: str
+    employee_name: str
+    email: EmailStr
+    password: str
+    role: str
+    department: str | None = None
