@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, time
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -6,6 +6,10 @@ from app.models.customer_model import Customer
 from app.models.room_model import Room, RoomType
 from app.models.booking_stay_model import BookingStay, BookingStayNote
 from app.schemas.checkin_schema import CheckInCreateRequest
+
+from app.models.customer_vip_account_model import CustomerVipAccount
+from app.utils.account_generator import generate_login_account, generate_initial_password
+from app.utils.security import get_password_hash
 
 
 class CheckInService:
@@ -27,6 +31,24 @@ class CheckInService:
             .filter(Room.is_active == True)
             .order_by(Room.room_no)
             .all()
+        )
+    
+    def _generate_unique_vip_account(self) -> str:
+        for _ in range(10):
+            account = generate_login_account()
+
+            exists = (
+                self.db.query(CustomerVipAccount)
+                .filter(CustomerVipAccount.login_account == account)
+                .first()
+            )
+
+            if exists is None:
+                return account
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="VIP帳號產生失敗，請重試",
         )
 
     def create_checkin(self, request: CheckInCreateRequest):
@@ -93,6 +115,25 @@ class CheckInService:
                         created_at=now,
                     )
                 )
+
+        vip_login_account = self._generate_unique_vip_account()
+        vip_initial_password = generate_initial_password()
+
+        expire_at = datetime.combine(
+            request.check_out_date + timedelta(days=1),
+            time(23, 59, 59),
+        )
+
+        vip_account = CustomerVipAccount(
+            customer_id=customer.customer_id,
+            login_account=vip_login_account,
+            password_hash=get_password_hash(vip_initial_password),
+            is_active=True,
+            expire_at=expire_at,
+            updated_at=now,
+        )
+
+        self.db.add(vip_account)
 
         self.db.commit()
 
