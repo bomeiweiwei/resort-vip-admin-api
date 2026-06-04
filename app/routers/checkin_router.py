@@ -46,6 +46,7 @@ def create_checkin(
 @router.post("/{customer_id}/generate-recommendation")
 def generate_recommendation(
     customer_id: str,
+    current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     try:
