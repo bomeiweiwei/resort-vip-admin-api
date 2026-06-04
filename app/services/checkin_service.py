@@ -11,6 +11,9 @@ from app.models.customer_vip_account_model import CustomerVipAccount
 from app.utils.account_generator import generate_login_account, generate_initial_password
 from app.utils.security import get_password_hash
 
+from app.services.vip_prompt_service import VipPromptService
+from app.prompts.prompt_builder import build_vip_system_prompt
+
 
 class CheckInService:
     def __init__(self, db: Session):
@@ -134,7 +137,18 @@ class CheckInService:
         )
 
         self.db.add(vip_account)
+        self.db.flush()
 
+        prompt_service = VipPromptService(self.db)
+
+        prompt_data = prompt_service.get_customer_prompt_data(
+            str(customer.customer_id)
+        )
+
+        system_prompt = build_vip_system_prompt(prompt_data)
+
+        print(system_prompt)
+        
         self.db.commit()
 
         return {
