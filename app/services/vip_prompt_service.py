@@ -11,6 +11,7 @@ class VipPromptService:
             SELECT
                 c.FullName AS full_name,
                 sg.GenderName AS gender_name,
+                bs.CheckInDate AS check_in_date,
 
                 DATEDIFF(YEAR, c.BirthDate, GETDATE())
                 -
@@ -68,4 +69,9 @@ class VipPromptService:
             }
         ).mappings().first()
 
-        return result
+        if result is None:
+            raise ValueError(
+                f"Customer {customer_id} prompt data not found."
+            )
+
+        return dict(result)

@@ -12,8 +12,12 @@ from app.utils.account_generator import generate_login_account, generate_initial
 from app.utils.security import get_password_hash
 
 from app.services.vip_prompt_service import VipPromptService
-from app.prompts.prompt_builder import build_vip_system_prompt
 
+import json
+from app.prompts.prompt_builder import build_vip_system_prompt, build_vip_user_prompt
+
+from app.services.itinerary_knowledge_service import ItineraryKnowledgeService
+from app.utils.date_helper import build_date_list
 
 class CheckInService:
     def __init__(self, db: Session):
@@ -127,6 +131,7 @@ class CheckInService:
             time(23, 59, 59),
         )
 
+        # 1. 建立 VIP check-in 資料
         vip_account = CustomerVipAccount(
             customer_id=customer.customer_id,
             login_account=vip_login_account,
@@ -139,15 +144,44 @@ class CheckInService:
         self.db.add(vip_account)
         self.db.flush()
 
+        # 2. 取得 SQL 組 prompt 所需資料
         prompt_service = VipPromptService(self.db)
 
         prompt_data = prompt_service.get_customer_prompt_data(
             str(customer.customer_id)
         )
 
-        system_prompt = build_vip_system_prompt(prompt_data)
+        date_list = build_date_list(
+            check_in_date=prompt_data["check_in_date"],
+            stay_days=prompt_data["stay_days"],
+        )
 
+        # 3. 根據客戶與住宿資料，查詢向量資料庫
+        itinerary_knowledge_service = ItineraryKnowledgeService(self.db)
+
+        knowledge_context = itinerary_knowledge_service.build_itinerary_by_dates(
+            date_list=date_list,
+        )
+
+        # 4. 組 prompt
+        system_prompt = build_vip_system_prompt()
+
+        user_prompt = build_vip_user_prompt(
+            data=prompt_data,
+            knowledge_context=json.dumps(
+                knowledge_context,
+                ensure_ascii=False,
+                indent=2,
+                default=str,
+            ),
+        )
+
+        print("========== system_prompt ==========")
         print(system_prompt)
+
+        print("========== user_prompt ==========")
+        print(user_prompt)
+
         
         self.db.commit()
 
