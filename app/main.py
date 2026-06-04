@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routers.employee_router import router as employee_router
 from app.routers.auth_router import router as auth_router
+from app.routers.checkin_router import router as checkin_router
 
 
 app = FastAPI(
@@ -31,6 +32,12 @@ app.include_router(
     employee_router,
     prefix="/api/employees",
     tags=["Employees"],
+)
+
+app.include_router(
+    checkin_router,
+    prefix="/api/checkins",
+    tags=["CheckIn"],
 )
 
 

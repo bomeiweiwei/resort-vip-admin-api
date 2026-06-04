@@ -1,0 +1,20 @@
+from sqlalchemy import Column, String, Date, DateTime, SmallInteger
+from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
+
+from app.database import Base
+from sqlalchemy import text
+
+class Customer(Base):
+    __tablename__ = "Customer"
+    __table_args__ = {"schema": "dbo"}
+
+    customer_id = Column("CustomerId", UNIQUEIDENTIFIER, primary_key=True,server_default=text("NEWSEQUENTIALID()"))
+    full_name = Column("FullName", String(100), nullable=False)
+    gender_id = Column("GenderId", SmallInteger, nullable=False)
+    birth_date = Column("BirthDate", Date, nullable=True)
+    country_code = Column("CountryCode", String(10), nullable=False)
+    mobile_phone = Column("MobilePhone", String(30), nullable=True)
+    phone = Column("Phone", String(30), nullable=True)
+    email = Column("Email", String(100), nullable=True)
+    created_at = Column("CreatedAt", DateTime, nullable=False)
+    updated_at = Column("UpdatedAt", DateTime, nullable=False)
