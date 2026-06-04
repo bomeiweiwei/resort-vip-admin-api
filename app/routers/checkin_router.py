@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -41,3 +41,34 @@ def create_checkin(
 ):
     service = CheckInService(db)
     return service.create_checkin(request)
+
+
+@router.post("/{customer_id}/generate-recommendation")
+def generate_recommendation(
+    customer_id: str,
+    db: Session = Depends(get_db),
+):
+    try:
+        service = CheckInService(db)
+
+        result = service.generate_recommendation(
+            customer_id=customer_id
+        )
+
+        return {
+            "success": True,
+            "message": "AI 推薦產生成功",
+            "data": result,
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=str(e),
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI 推薦產生失敗：{str(e)}",
+        )

@@ -22,5 +22,20 @@ class Settings:
         os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "60")
     )
 
+    AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower()
+
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL_NAME: str = os.getenv("GEMINI_MODEL_NAME", "gemini-3.5-flash")
+
+    AZURE_OPENAI_API_KEY: str = os.getenv("AZURE_OPENAI_API_KEY", "")
+    AZURE_OPENAI_BASE_URL: str = os.getenv("AZURE_OPENAI_BASE_URL", "")
+    AZURE_OPENAI_DEPLOYMENT_NAME: str = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "")
+
+    LMSTUDIO_MODEL_NAME: str = os.getenv("LMSTUDIO_MODEL_NAME", "")
+    LMSTUDIO_BASE_URL: str = os.getenv("LMSTUDIO_BASE_URL", "")
+    LMSTUDIO_API_KEY: str = os.getenv("LMSTUDIO_API_KEY", "")
+
+    OLLAMA_MODEL_NAME: str = os.getenv("OLLAMA_MODEL_NAME", "")
+
 
 settings = Settings()

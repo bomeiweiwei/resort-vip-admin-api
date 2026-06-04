@@ -17,7 +17,11 @@ import json
 from app.prompts.prompt_builder import build_vip_system_prompt, build_vip_user_prompt
 
 from app.services.itinerary_knowledge_service import ItineraryKnowledgeService
+from app.services.itinerary_recommendation_service import ItineraryRecommendationService
 from app.utils.date_helper import build_date_list
+
+from app.ai.factory import create_ai_langchain
+from app.config import settings
 
 class CheckInService:
     def __init__(self, db: Session):
@@ -144,19 +148,31 @@ class CheckInService:
         self.db.add(vip_account)
         self.db.flush()
 
-        # 2. 取得 SQL 組 prompt 所需資料
+        self.db.commit()
+
+        return {
+            "customer_id": str(customer.customer_id),
+            "booking_stay_id": str(booking.booking_stay_id),
+        }
+    
+    def generate_recommendation(self, customer_id: str) -> dict:
+        # 1. 取得 SQL 組 prompt 所需資料
         prompt_service = VipPromptService(self.db)
 
         prompt_data = prompt_service.get_customer_prompt_data(
-            str(customer.customer_id)
+            customer_id=customer_id
         )
 
+        if prompt_data is None:
+            raise ValueError("查無客戶入住資料，無法產生 AI 推薦。")
+
+        # 2. 產生日期清單，最多 5 天
         date_list = build_date_list(
             check_in_date=prompt_data["check_in_date"],
-            stay_days=prompt_data["stay_days"],
+            stay_days=min(prompt_data["stay_days"], 5),
         )
 
-        # 3. 根據客戶與住宿資料，查詢向量資料庫
+        # 3. 查詢渡假村知識庫
         itinerary_knowledge_service = ItineraryKnowledgeService(self.db)
 
         knowledge_context = itinerary_knowledge_service.build_itinerary_by_dates(
@@ -171,21 +187,61 @@ class CheckInService:
             knowledge_context=json.dumps(
                 knowledge_context,
                 ensure_ascii=False,
-                indent=2,
+                separators=(",", ":"),
                 default=str,
             ),
         )
 
-        print("========== system_prompt ==========")
-        print(system_prompt)
+        # 5. 呼叫 LLM
+        ai_client = create_ai_langchain(settings.AI_PROVIDER)
 
-        print("========== user_prompt ==========")
-        print(user_prompt)
-
+        ai_result_text = ai_client.chat(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+        )
         
-        self.db.commit()
+        ai_result = self.parse_ai_json(ai_result_text)
+
+        recommendation_service = ItineraryRecommendationService(
+            self.db
+        )
+        recommendation_id = (
+            recommendation_service.save_recommendation(
+                customer_id=customer_id,
+                ai_result=ai_result,
+            )
+        )
 
         return {
-            "customer_id": str(customer.customer_id),
-            "booking_stay_id": str(booking.booking_stay_id),
+            # "customer_id": customer_id,
+            # "date_list": date_list,
+            # "knowledge_context": knowledge_context,
+            # "ai_result": ai_result,
+            "recommendation_id": recommendation_id,
         }
+
+    def parse_ai_json(
+        self,
+        ai_result_text: str,
+    ) -> dict:
+
+        text = ai_result_text.strip()
+
+        if text.startswith("```json"):
+            text = text.replace(
+                "```json",
+                "",
+                1
+            )
+
+        if text.startswith("```"):
+            text = text.replace(
+                "```",
+                "",
+                1
+            )
+
+        if text.endswith("```"):
+            text = text[:-3]
+
+        return json.loads(text.strip())

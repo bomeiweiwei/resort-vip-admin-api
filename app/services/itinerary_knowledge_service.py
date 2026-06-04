@@ -66,12 +66,13 @@ class ItineraryKnowledgeService:
                     if db_item is None:
                         continue
 
+                    feature = db_item["feature"] or ""
                     selected_items.append(
                         {
                             "title": db_item["place_name"],
-                            "content": db_item["feature"],
+                            "content": feature[:30],
                             "preference": db_item["category"],
-                            "score": float(score),
+                            # "score": float(score),
                         }
                     )
 
@@ -102,31 +103,31 @@ class ItineraryKnowledgeService:
                 "time": "09:00",
                 "query": "適合早上開始的餐廳或早餐推薦，適合VIP客戶，交通方便",
                 "filter": {"category": "餐廳美食"},
-                "k": 5,
+                "k": 1,
             },
             {
                 "time": "11:00",
                 "query": "適合上午安排的渡假村內外景點，行程不要太累，適合親子或家庭",
                 "filter": None,
-                "k": 5,
+                "k": 2,
             },
             {
                 "time": "13:00",
                 "query": "適合午餐後安排的景點或室內活動，適合下午時段",
                 "filter": None,
-                "k": 5,
+                "k": 2,
             },
             {
                 "time": "15:00",
                 "query": "適合下午茶、輕鬆散步、文化體驗或親子活動的景點",
                 "filter": None,
-                "k": 5,
+                "k": 2,
             },
             {
                 "time": "18:00",
                 "query": "適合晚上用餐的餐廳推薦，適合VIP客戶與家庭旅客",
                 "filter": {"category": "餐廳美食"},
-                "k": 5,
+                "k": 1,
             },
         ]
 
