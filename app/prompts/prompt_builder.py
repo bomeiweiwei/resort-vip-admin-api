@@ -18,8 +18,13 @@ def build_vip_system_prompt() -> str:
 
 def build_vip_user_prompt(
     data: dict,
+    stay_notes: list,
     knowledge_context: str,
 ) -> str:
+    note_text = "\n".join(
+        f"- {note['NoteContent']}"
+        for note in stay_notes
+    )
     return f"""
 請根據以下客戶資料與渡假村知識庫候選資料，產生 VIP 個人化入住行程。
 
@@ -35,6 +40,9 @@ def build_vip_user_prompt(
 - 房型：{data["room_type_name"]}
 - 總人數：{data["total_count"]} 人
 - 是否有停車：{data["has_parking"]}
+
+特殊備註：
+{note_text}
 
 渡假村知識庫候選資料：
 {knowledge_context}

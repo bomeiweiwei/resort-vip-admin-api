@@ -163,6 +163,10 @@ class CheckInService:
             customer_id=customer_id
         )
 
+        stay_notes = prompt_service.get_customer_booking_stay_notes(
+            customer_id=customer_id
+        )
+
         if prompt_data is None:
             raise ValueError("查無客戶入住資料，無法產生 AI 推薦。")
 
@@ -184,6 +188,7 @@ class CheckInService:
 
         user_prompt = build_vip_user_prompt(
             data=prompt_data,
+            stay_notes=stay_notes,
             knowledge_context=json.dumps(
                 knowledge_context,
                 ensure_ascii=False,
@@ -191,6 +196,11 @@ class CheckInService:
                 default=str,
             ),
         )
+
+        # print("=== System Prompt ===")
+        # print(system_prompt)
+        # print("=== User Prompt ===")
+        # print(user_prompt)
 
         # 5. 呼叫 LLM
         ai_client = create_ai_langchain(settings.AI_PROVIDER)

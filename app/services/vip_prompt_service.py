@@ -75,3 +75,24 @@ class VipPromptService:
             )
 
         return dict(result)
+    
+    def get_customer_booking_stay_notes(self, customer_id: str):
+        sql = text("""
+            SELECT 
+                bsn.NoteContent
+            FROM 
+            BookingStayNote bsn
+                INNER JOIN BookingStay bs on bsn.BookingStayId = bs.BookingStayId
+                INNER JOIN Customer c on bs.CustomerId = c.CustomerId
+            WHERE
+            c.CustomerId = :customer_id
+        """)
+
+        result = self.db.execute(
+            sql,
+            {
+                "customer_id": customer_id
+            }
+        ).mappings().all()
+
+        return [dict(row) for row in result]
