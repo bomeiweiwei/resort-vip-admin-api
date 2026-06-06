@@ -5,6 +5,7 @@ from app.config import settings
 from app.routers.employee_router import router as employee_router
 from app.routers.auth_router import router as auth_router
 from app.routers.checkin_router import router as checkin_router
+from app.routers.recommend_router import router as recommend_router
 
 
 app = FastAPI(
@@ -38,6 +39,12 @@ app.include_router(
     checkin_router,
     prefix="/api/checkins",
     tags=["CheckIn"],
+)
+
+app.include_router(
+    recommend_router,
+    prefix="/api/recommends",
+    tags=["Recommends"],
 )
 
 
