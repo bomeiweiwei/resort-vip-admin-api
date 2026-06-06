@@ -12,7 +12,7 @@ class Settings:
     DB_NAME: str = os.getenv("DB_NAME", "ResortVipAdminDB")
     DB_USER: str = os.getenv("DB_USER", "resortmgr")
     DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
-    DB_DRIVER: str = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
+    DB_DRIVER: str = os.getenv("DB_DRIVER", "ODBC Driver 18 for SQL Server")
 
     FRONTEND_ORIGIN: str = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
 
