@@ -36,6 +36,7 @@ class Settings:
     LMSTUDIO_API_KEY: str = os.getenv("LMSTUDIO_API_KEY", "")
 
     OLLAMA_MODEL_NAME: str = os.getenv("OLLAMA_MODEL_NAME", "")
+    OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "")
 
 
 settings = Settings()
