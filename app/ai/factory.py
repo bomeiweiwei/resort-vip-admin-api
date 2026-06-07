@@ -37,6 +37,7 @@ def create_ai_langchain(ai_type: AiType | str) -> BaseAILangchain:
     if ai_type == AiType.OLLAMA:
         return OllamaLangchain(
             model_name=settings.OLLAMA_MODEL_NAME,
+            base_url=settings.OLLAMA_BASE_URL,
         )
 
     raise ValueError(f"不支援的 AI 類型：{ai_type}")
