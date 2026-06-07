@@ -153,6 +153,9 @@ class CheckInService:
         return {
             "customer_id": str(customer.customer_id),
             "booking_stay_id": str(booking.booking_stay_id),
+            "vip_login_account": vip_login_account,
+            "vip_initial_password": vip_initial_password,
+            "vip_login_url": f"{settings.VIP_FRONTEND_URL}/login",
         }
     
     def generate_recommendation(self, customer_id: str) -> dict:

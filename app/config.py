@@ -38,5 +38,7 @@ class Settings:
     OLLAMA_MODEL_NAME: str = os.getenv("OLLAMA_MODEL_NAME", "")
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "")
 
+    VIP_FRONTEND_URL: str = os.getenv("VIP_FRONTEND_URL", "http://localhost:5174")
+
 
 settings = Settings()

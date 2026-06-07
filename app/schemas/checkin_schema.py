@@ -42,3 +42,6 @@ class CheckInCreateRequest(BaseModel):
 class CheckInCreateResponse(BaseModel):
     customer_id: str
     booking_stay_id: str
+    vip_login_account: str
+    vip_initial_password: str
+    vip_login_url: str
