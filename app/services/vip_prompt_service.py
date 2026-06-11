@@ -79,6 +79,7 @@ class VipPromptService:
     def get_customer_booking_stay_notes(self, customer_id: str):
         sql = text("""
             SELECT 
+                bsn.NoteType,
                 bsn.NoteContent
             FROM 
             BookingStayNote bsn
