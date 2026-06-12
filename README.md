@@ -34,7 +34,7 @@ pip install -r requirements.txt
 
 ### 3. 設定環境變數
 
-建立 `.env`：
+建立 `.env`（可參考 `.env.example`）：
 
 ```env
 APP_NAME=Resort VIP Admin API
@@ -47,37 +47,37 @@ DB_PASSWORD=your_password
 DB_DRIVER=ODBC Driver 18 for SQL Server
 
 FRONTEND_ORIGIN=http://localhost:5173
+VIP_FRONTEND_URL=http://localhost:5174
 
 JWT_SECRET_KEY=change_this_secret_key
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 
-# RAG / Embedding
+# RAG / Embedding（僅支援 Azure OpenAI）
 VECTOR_DB_DIR=/vector_db/resort_knowledge_faiss
-EMBEDDING_PROVIDER=huggingface        # huggingface | azure
-HF_EMBEDDING_MODEL_NAME=BAAI/bge-m3
-HF_DEVICE=cpu
+EMBEDDING_PROVIDER=azure
 AZURE_OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 
-# AI 提供者：gemini | azure | lmstudio | ollama
-AI_PROVIDER=lmstudio
-
-# LM Studio
-LMSTUDIO_BASE_URL=http://localhost:1234/v1
-LMSTUDIO_API_KEY=lm-studio
-LMSTUDIO_MODEL_NAME=gemma-4-26b-a4b-it
-
-# Gemini
-GEMINI_API_KEY=
-GEMINI_MODEL_NAME=gemini-3.5-flash
+# AI 提供者：azure | lmstudio | gemini | ollama
+AI_PROVIDER=azure
 
 # Azure OpenAI
 AZURE_OPENAI_API_KEY=
 AZURE_OPENAI_BASE_URL=
 AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.1
 
-# Ollama
-OLLAMA_MODEL_NAME=gemma4:e4b
+# LM Studio（本地）
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+LMSTUDIO_API_KEY=lm-studio
+LMSTUDIO_MODEL_NAME=
+
+# Gemini
+GEMINI_API_KEY=
+GEMINI_MODEL_NAME=gemini-3.5-flash
+
+# Ollama（本地）
+OLLAMA_MODEL_NAME=
+OLLAMA_BASE_URL=http://localhost:11434
 ```
 
 ### 4. 啟動開發伺服器
@@ -145,6 +145,7 @@ app/
 ├── ai/                          # 可插拔 AI 提供者層
 │   ├── base.py                  # BaseAILangchain 介面
 │   ├── factory.py               # create_ai_langchain() 工廠
+│   ├── embedding_factory.py     # get_embedding_function()（Azure OpenAI）
 │   ├── gemini_langchain.py
 │   ├── azure_langchain.py
 │   ├── lmstudio_langchain.py
@@ -225,10 +226,20 @@ app/
 
 | 值 | 提供者 | 所需環境變數 |
 |----|--------|-------------|
-| `gemini` | Google Gemini | `GEMINI_API_KEY`, `GEMINI_MODEL_NAME` |
 | `azure` | Azure OpenAI | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_BASE_URL`, `AZURE_OPENAI_DEPLOYMENT_NAME` |
 | `lmstudio` | LM Studio（本地） | `LMSTUDIO_BASE_URL`, `LMSTUDIO_API_KEY`, `LMSTUDIO_MODEL_NAME` |
-| `ollama` | Ollama（本地） | `OLLAMA_MODEL_NAME` |
+| `gemini` | Google Gemini | `GEMINI_API_KEY`, `GEMINI_MODEL_NAME` |
+| `ollama` | Ollama（本地） | `OLLAMA_MODEL_NAME`, `OLLAMA_BASE_URL` |
+
+## Embedding 提供者
+
+透過環境變數 `EMBEDDING_PROVIDER` 設定，目前僅支援 Azure OpenAI：
+
+| 值 | 提供者 | 所需環境變數 |
+|----|--------|-------------|
+| `azure` | Azure OpenAI Embeddings | `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_BASE_URL`, `AZURE_OPENAI_EMBEDDING_MODEL` |
+
+FAISS 索引須在啟動前預先建置並放置於 `VECTOR_DB_DIR` 指定的路徑。
 
 ---
 
@@ -241,6 +252,7 @@ ResortVipAdminDB
 ├── dbo.CustomerVipAccounts
 ├── dbo.Rooms
 ├── dbo.BookingStays
+├── dbo.ResortKnowledgeItem
 ├── dbo.VipItineraryRecommendations
 └── dbo.VipItinerarySchedules
 ```
@@ -264,6 +276,11 @@ ResortVipAdminDB
 ---
 
 ## Changelog
+
+### v0.5.0
+- 移除 HuggingFace embedding 支援，統一改用 Azure OpenAI Embeddings
+- 將所有 `os.getenv()` 呼叫集中至 `Settings` singleton（`config.py`）
+- 新增 `EMBEDDING_PROVIDER`、`AZURE_OPENAI_EMBEDDING_MODEL`、`VECTOR_DB_DIR`、`VIP_FRONTEND_URL` 至 Settings
 
 ### v0.4.0
 - 新增行程推薦讀取端點（清單 / 明細）
