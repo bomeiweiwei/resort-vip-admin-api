@@ -22,7 +22,8 @@ class Settings:
         os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "60")
     )
 
-    AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower()
+    AI_PROVIDER = os.getenv("AI_PROVIDER", "azure").lower()
+    EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "azure").lower()
 
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     GEMINI_MODEL_NAME: str = os.getenv("GEMINI_MODEL_NAME", "gemini-3.5-flash")
@@ -30,6 +31,7 @@ class Settings:
     AZURE_OPENAI_API_KEY: str = os.getenv("AZURE_OPENAI_API_KEY", "")
     AZURE_OPENAI_BASE_URL: str = os.getenv("AZURE_OPENAI_BASE_URL", "")
     AZURE_OPENAI_DEPLOYMENT_NAME: str = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "")
+    AZURE_OPENAI_EMBEDDING_MODEL: str = os.getenv("AZURE_OPENAI_EMBEDDING_MODEL", "")
 
     LMSTUDIO_MODEL_NAME: str = os.getenv("LMSTUDIO_MODEL_NAME", "")
     LMSTUDIO_BASE_URL: str = os.getenv("LMSTUDIO_BASE_URL", "")
@@ -39,6 +41,8 @@ class Settings:
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "")
 
     VIP_FRONTEND_URL: str = os.getenv("VIP_FRONTEND_URL", "http://localhost:5174")
+
+    VECTOR_DB_DIR: str = os.getenv("VECTOR_DB_DIR", "")
 
 
 settings = Settings()

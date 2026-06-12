@@ -7,6 +7,8 @@ from langchain_community.vectorstores import FAISS
 
 from app.ai.embedding_factory import get_embedding_function
 
+from app.config import settings
+
 
 class ItineraryKnowledgeService:
     def __init__(self, db: Session):
@@ -15,7 +17,7 @@ class ItineraryKnowledgeService:
 
     def _load_vector_db(self):
         vector_db_dir = Path(
-            os.getenv("VECTOR_DB_DIR")
+            settings.VECTOR_DB_DIR
         )
 
         embedding_function = get_embedding_function()
