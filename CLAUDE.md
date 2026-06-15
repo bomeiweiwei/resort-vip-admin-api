@@ -45,8 +45,7 @@ JWT_SECRET_KEY=change_this_secret_key
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 
-# RAG / Embedding (Azure OpenAI only)
-VECTOR_DB_DIR=/vector_db/resort_knowledge_faiss
+# Embedding (Azure OpenAI only)
 EMBEDDING_PROVIDER=azure
 AZURE_OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 
@@ -67,11 +66,16 @@ GEMINI_MODEL_NAME=gemini-3.5-flash
 
 OLLAMA_MODEL_NAME=
 OLLAMA_BASE_URL=http://localhost:11434
+
+# Qdrant Cloud (vector store for RAG)
+QDRANT_URL=
+QDRANT_API_KEY=
+QDRANT_COLLECTION_NAME=
 ```
 
 ## Architecture
 
-**Stack:** Python 3.12 · FastAPI · SQL Server (PyODBC + SQLAlchemy 2.0) · JWT (python-jose) · bcrypt (passlib) · LangChain
+**Stack:** Python 3.12 · FastAPI · SQL Server (PyODBC + SQLAlchemy 2.0) · JWT (python-jose) · bcrypt (passlib) · LangChain · Qdrant Cloud
 
 **Layer structure:** each domain follows `router → service → model/schema`.
 
@@ -100,22 +104,22 @@ To add a new LLM provider: subclass `BaseAILangchain`, add its `AiType` enum val
 
 ## RAG Pipeline
 
-The itinerary recommendation feature uses a Retrieval-Augmented Generation pipeline:
+The itinerary recommendation feature uses a Retrieval-Augmented Generation pipeline backed by **Qdrant Cloud**:
 
 1. **VipPromptService** — queries SQL to gather customer profile, booking, and stay notes.
-2. **ItineraryKnowledgeService** — loads a FAISS vector store from `settings.VECTOR_DB_DIR`; runs `similarity_search_with_score` across five time-slot search plans (09:00, 11:00, 13:00, 15:00, 18:00); deduplicates by `place_name` within a day; fetches full item data from `dbo.ResortKnowledgeItem`.
-3. **prompt_builder** (`app/prompts/prompt_builder.py`) — assembles the system and user prompts from the retrieved context.
+2. **ItineraryKnowledgeService** — connects to a Qdrant Cloud collection via `QdrantVectorStore.from_existing_collection`; runs `similarity_search_with_score` across five time-slot search plans (09:00, 11:00, 13:00, 15:00, 18:00); deduplicates by `place_name` within a day; fetches full item data from `dbo.ResortKnowledgeItem` by `source_file`. Requires `QDRANT_URL`, `QDRANT_API_KEY`, and `QDRANT_COLLECTION_NAME` to be set — the service raises `ValueError` at init if any are missing.
+3. **prompt_builder** ([app/prompts/prompt_builder.py](app/prompts/prompt_builder.py)) — assembles the system and user prompts from the retrieved context.
 4. **create_ai_langchain** — calls the active LLM provider; response is expected JSON (possibly wrapped in ` ```json ``` ` fences), stripped in `CheckInService.parse_ai_json`.
 5. **ItineraryRecommendationService** — persists the parsed result to `dbo.VipItineraryRecommendation` and `dbo.VipItinerarySchedule` via raw SQL.
 
-Embedding uses Azure OpenAI (`EMBEDDING_PROVIDER=azure`). The FAISS index must exist at `VECTOR_DB_DIR` before calling the generate endpoint.
+Embedding uses Azure OpenAI (`EMBEDDING_PROVIDER=azure`). The Qdrant collection must be populated before calling the generate endpoint; there is no local index file — the vector store lives in Qdrant Cloud.
 
 ## Adding a New Module
 
-Follow the pattern of the existing `employee` module:
+Follow the pattern of the existing modules (e.g. `customer_service_request`):
 
 1. **Model** (`app/models/`) — SQLAlchemy `Base` subclass; map PascalCase columns explicitly.
 2. **Schema** (`app/schemas/`) — Pydantic models for request/response; use `ConfigDict(from_attributes=True)` on response schemas.
-3. **Service** (`app/services/`) — class taking `db: Session`; all business logic lives here.
-4. **Router** (`app/routers/`) — thin `APIRouter`; instantiates the service and delegates. Add `Depends(get_current_user)` on every endpoint that requires auth.
+3. **Service** (`app/services/`) — class taking `db: Session`; all business logic lives here. Export a module-level singleton instance (e.g. `customer_service_request_service = CustomerServiceRequestService()`) so routers can import it directly.
+4. **Router** (`app/routers/`) — thin `APIRouter`; imports the singleton service and delegates. Add `Depends(get_current_user)` on every endpoint that requires auth.
 5. Register in [app/main.py](app/main.py) with `app.include_router(..., prefix="/api/...", tags=[...])`.
