@@ -1,6 +1,6 @@
 # Resort VIP Admin API
 
-渡假村 VIP 後台管理系統 API，基於 FastAPI 與 SQL Server 構建，整合可插拔 AI 提供者層，支援 VIP 賓客入住與行程智慧推薦。
+渡假村 VIP 後台管理系統 API，基於 FastAPI 與 SQL Server 構建，整合可插拔 AI 提供者層，支援 VIP 賓客入住、AI 行程智慧推薦，以及客服需求管理。
 
 ## Tech Stack
 
@@ -64,7 +64,7 @@ AI_PROVIDER=azure
 # Azure OpenAI
 AZURE_OPENAI_API_KEY=
 AZURE_OPENAI_BASE_URL=
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.1
+AZURE_OPENAI_DEPLOYMENT_NAME=
 
 # LM Studio（本地）
 LMSTUDIO_BASE_URL=http://localhost:1234/v1
@@ -116,7 +116,8 @@ app/
 │   ├── auth_router.py
 │   ├── employee_router.py
 │   ├── checkin_router.py
-│   └── recommend_router.py
+│   ├── recommend_router.py
+│   └── customer_service_request_router.py
 │
 ├── services/                    # 業務邏輯層
 │   ├── auth_service.py
@@ -124,8 +125,9 @@ app/
 │   ├── checkin_service.py
 │   ├── recommend_service.py
 │   ├── itinerary_recommendation_service.py
-│   ├── itinerary_knowledge_service.py   # RAG 知識檢索
-│   └── vip_prompt_service.py            # VIP Prompt 組裝
+│   ├── itinerary_knowledge_service.py        # RAG 知識檢索
+│   ├── vip_prompt_service.py                 # VIP Prompt 組裝
+│   └── customer_service_request_service.py
 │
 ├── models/                      # SQLAlchemy ORM 模型（對應 DB 資料表）
 │   ├── employee_model.py
@@ -134,13 +136,15 @@ app/
 │   ├── room_model.py
 │   ├── booking_stay_model.py
 │   ├── vip_itinerary_recommendation_model.py
-│   └── vip_itinerary_schedule_model.py
+│   ├── vip_itinerary_schedule_model.py
+│   └── customer_service_request_model.py
 │
 ├── schemas/                     # Pydantic 請求 / 回應結構
 │   ├── auth_schema.py
 │   ├── employee_schema.py
 │   ├── checkin_schema.py
-│   └── recommend_schema.py
+│   ├── recommend_schema.py
+│   └── customer_service_request_schema.py
 │
 ├── ai/                          # 可插拔 AI 提供者層
 │   ├── base.py                  # BaseAILangchain 介面
@@ -218,6 +222,13 @@ app/
 | GET | `/api/recommends/itinerary` | 需要 | 取得所有行程推薦紀錄 |
 | GET | `/api/recommends/itinerary/{customer_id}/{recommendation_id}/schedules` | 需要 | 取得推薦的行程明細 |
 
+### 客服需求管理
+
+| Method | Path | 驗證 | 說明 |
+|--------|------|------|------|
+| GET | `/api/customer-service-requests/customer-service-req-list` | 需要 | 取得客服需求清單 |
+| GET | `/api/customer-service-requests/customer-service-req-detail/{id}` | 需要 | 取得客服需求詳情 |
+
 ---
 
 ## AI 提供者
@@ -254,7 +265,8 @@ ResortVipAdminDB
 ├── dbo.BookingStays
 ├── dbo.ResortKnowledgeItem
 ├── dbo.VipItineraryRecommendations
-└── dbo.VipItinerarySchedules
+├── dbo.VipItinerarySchedules
+└── dbo.CustomerServiceRequest
 ```
 
 ### dbo.Employees
@@ -273,9 +285,36 @@ ResortVipAdminDB
 | CreatedAt | datetime | 建立時間 |
 | UpdatedAt | datetime | 更新時間 |
 
+### dbo.CustomerServiceRequest
+
+| 欄位 | 類型 | 說明 |
+|------|------|------|
+| CustomerServiceRequestId | uniqueidentifier | PK |
+| RequestNo | varchar(30) | 需求單號 |
+| CustomerVipAccountId | uniqueidentifier | VIP 帳號 FK |
+| CustomerId | uniqueidentifier | 賓客 FK |
+| LoginAccount | varchar(10) | 登入帳號 |
+| BookingStayId | uniqueidentifier | 訂房紀錄 FK（可為空） |
+| RoomId | int | 房間 FK（可為空） |
+| RoomNo | varchar(20) | 房間號碼（可為空） |
+| CustomerName | varchar(100) | 賓客姓名（可為空） |
+| Message | varchar(1000) | 需求內容 |
+| Language | varchar(20) | 語言（可為空） |
+| AssignedDepartment | varchar(50) | 指派部門（可為空） |
+| Status | varchar(20) | 狀態 |
+| PriorityLevel | varchar(20) | 優先等級 |
+| Remark | varchar(1000) | 備註（可為空） |
+| CreatedAt | datetime | 建立時間 |
+| AssignedAt | datetime | 指派時間（可為空） |
+| CompletedAt | datetime | 完成時間（可為空） |
+
 ---
 
 ## Changelog
+
+### v0.6.0
+- 新增客服需求管理模組（清單 / 詳情查詢）
+- 新增 `dbo.CustomerServiceRequest` 資料表對應模型
 
 ### v0.5.0
 - 移除 HuggingFace embedding 支援，統一改用 Azure OpenAI Embeddings

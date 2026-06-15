@@ -19,26 +19,26 @@ RUN apt-get update \
     && curl -fsSL https://packages.microsoft.com/config/debian/12/prod.list \
         > /etc/apt/sources.list.d/mssql-release.list \
     && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18
-
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 \
     && apt-get purge -y --auto-remove curl gnupg gcc g++ unixodbc-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
 RUN addgroup --system appuser \
-    && adduser --system --home /home/appuser --ingroup appuser appuser \
-    && chown -R appuser:appuser /home/appuser
+    && adduser --system --home /home/appuser --ingroup appuser appuser
 
 COPY --chown=appuser:appuser app ./app
 
 USER appuser
 
-VOLUME ["/vector_db"]
-
 EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/')" || exit 1
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
