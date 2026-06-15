@@ -1,31 +1,37 @@
-import os
-from pathlib import Path
-
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from langchain_community.vectorstores import FAISS
+
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client.models import FieldCondition, Filter, MatchAny
 
 from app.ai.embedding_factory import get_embedding_function
-
 from app.config import settings
 
 
 class ItineraryKnowledgeService:
     def __init__(self, db: Session):
         self.db = db
+        self._validate_settings()
         self.vector_db = self._load_vector_db()
 
-    def _load_vector_db(self):
-        vector_db_dir = Path(
-            settings.VECTOR_DB_DIR
-        )
+    def _validate_settings(self):
+        if not settings.QDRANT_URL:
+            raise ValueError("缺少 QDRANT_URL")
 
+        if not settings.QDRANT_API_KEY:
+            raise ValueError("缺少 QDRANT_API_KEY")
+
+        if not settings.QDRANT_COLLECTION_NAME:
+            raise ValueError("缺少 QDRANT_COLLECTION_NAME")
+
+    def _load_vector_db(self) -> QdrantVectorStore:
         embedding_function = get_embedding_function()
 
-        return FAISS.load_local(
-            folder_path=str(vector_db_dir),
-            embeddings=embedding_function,
-            allow_dangerous_deserialization=True,
+        return QdrantVectorStore.from_existing_collection(
+            embedding=embedding_function,
+            url=settings.QDRANT_URL,
+            api_key=settings.QDRANT_API_KEY,
+            collection_name=settings.QDRANT_COLLECTION_NAME,
         )
 
     def build_itinerary_by_dates(
@@ -44,8 +50,7 @@ class ItineraryKnowledgeService:
                 results = self.vector_db.similarity_search_with_score(
                     query=plan["query"],
                     k=20,
-                    fetch_k=100,
-                    filter=plan["filter"],
+                    filter=self._build_category_filter(plan["categories"]),
                 )
 
                 selected_items = []
@@ -57,7 +62,6 @@ class ItineraryKnowledgeService:
                     if not place_name or not source_file:
                         continue
 
-                    # 同一天不要重複景點
                     if place_name in used_places:
                         continue
 
@@ -69,12 +73,12 @@ class ItineraryKnowledgeService:
                         continue
 
                     feature = db_item["feature"] or ""
+
                     selected_items.append(
                         {
                             "title": db_item["place_name"],
                             "content": feature[:30],
                             "preference": db_item["category"],
-                            # "score": float(score),
                         }
                     )
 
@@ -99,37 +103,53 @@ class ItineraryKnowledgeService:
 
         return itinerary_list
 
+    def _build_category_filter(
+        self,
+        categories: list[str] | None,
+    ) -> Filter | None:
+        if not categories:
+            return None
+
+        return Filter(
+            must=[
+                FieldCondition(
+                    key="metadata.category",
+                    match=MatchAny(any=categories),
+                )
+            ]
+        )
+
     def _get_search_plans(self) -> list[dict]:
         return [
             {
                 "time": "09:00",
                 "query": "適合早上開始的餐廳或早餐推薦，適合VIP客戶，交通方便",
-                "filter": {"category": "餐廳美食"},
-                "k": 1,
+                "categories": ["餐廳美食"],
+                "k": 3,
             },
             {
                 "time": "11:00",
                 "query": "適合上午安排的渡假村內外景點，行程不要太累，適合親子或家庭",
-                "filter": None,
-                "k": 2,
+                "categories": None,
+                "k": 3,
             },
             {
                 "time": "13:00",
                 "query": "適合午餐後安排的景點或室內活動，適合下午時段",
-                "filter": None,
-                "k": 2,
+                "categories": None,
+                "k": 3,
             },
             {
                 "time": "15:00",
                 "query": "適合下午茶、輕鬆散步、文化體驗或親子活動的景點",
-                "filter": None,
-                "k": 2,
+                "categories": None,
+                "k": 3,
             },
             {
                 "time": "18:00",
                 "query": "適合晚上用餐的餐廳推薦，適合VIP客戶與家庭旅客",
-                "filter": {"category": "餐廳美食"},
-                "k": 1,
+                "categories": ["餐廳美食"],
+                "k": 3,
             },
         ]
 

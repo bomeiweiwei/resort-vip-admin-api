@@ -44,5 +44,9 @@ class Settings:
 
     VECTOR_DB_DIR: str = os.getenv("VECTOR_DB_DIR", "")
 
+    QDRANT_URL: str = os.getenv("QDRANT_URL", "")
+    QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY", "")
+    QDRANT_COLLECTION_NAME: str = os.getenv("QDRANT_COLLECTION_NAME", "")
+
 
 settings = Settings()
