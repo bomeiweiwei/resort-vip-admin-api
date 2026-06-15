@@ -26,7 +26,7 @@ docker run -p 8000:8000 --env-file .env resort-vip-admin-api
 
 ## Environment
 
-Create a `.env` file at the project root:
+Create a `.env` file at the project root (see `.env.example`):
 
 ```env
 APP_NAME=Resort VIP Admin API
@@ -39,17 +39,20 @@ DB_PASSWORD=your_password
 DB_DRIVER=ODBC Driver 18 for SQL Server
 
 FRONTEND_ORIGIN=http://localhost:5173
+VIP_FRONTEND_URL=http://localhost:5174
 
 JWT_SECRET_KEY=change_this_secret_key
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
 
-# AI provider: gemini | azure | lmstudio | ollama
-AI_PROVIDER=gemini
+# Embedding (Azure OpenAI only)
+EMBEDDING_PROVIDER=azure
+AZURE_OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 
-GEMINI_API_KEY=
-GEMINI_MODEL_NAME=gemini-3.5-flash
+# AI provider: azure | lmstudio | gemini | ollama
+AI_PROVIDER=azure
 
+# Azure OpenAI (used for both LLM and embeddings)
 AZURE_OPENAI_API_KEY=
 AZURE_OPENAI_BASE_URL=
 AZURE_OPENAI_DEPLOYMENT_NAME=
@@ -58,24 +61,26 @@ LMSTUDIO_BASE_URL=http://localhost:1234/v1
 LMSTUDIO_API_KEY=lm-studio
 LMSTUDIO_MODEL_NAME=
 
-OLLAMA_MODEL_NAME=
+GEMINI_API_KEY=
+GEMINI_MODEL_NAME=gemini-3.5-flash
 
-# RAG / Embedding
-VECTOR_DB_DIR=/vector_db/resort_knowledge_faiss
-EMBEDDING_PROVIDER=huggingface       # huggingface | azure
-HF_EMBEDDING_MODEL_NAME=BAAI/bge-m3
-HF_DEVICE=cpu
-AZURE_OPENAI_EMBEDDING_MODEL=        # only when EMBEDDING_PROVIDER=azure
+OLLAMA_MODEL_NAME=
+OLLAMA_BASE_URL=http://localhost:11434
+
+# Qdrant Cloud (vector store for RAG)
+QDRANT_URL=
+QDRANT_API_KEY=
+QDRANT_COLLECTION_NAME=
 ```
 
 ## Architecture
 
-**Stack:** Python 3.12 · FastAPI · SQL Server (PyODBC + SQLAlchemy 2.0) · JWT (python-jose) · bcrypt (passlib) · LangChain
+**Stack:** Python 3.12 · FastAPI · SQL Server (PyODBC + SQLAlchemy 2.0) · JWT (python-jose) · bcrypt (passlib) · LangChain · Qdrant Cloud
 
 **Layer structure:** each domain follows `router → service → model/schema`.
 
 - [app/main.py](app/main.py) — FastAPI app, CORS middleware, router registration under `/api/*`
-- [app/config.py](app/config.py) — `Settings` singleton loaded from `.env` via `python-dotenv`
+- [app/config.py](app/config.py) — `Settings` singleton loaded from `.env` via `python-dotenv`; all `os.getenv()` calls must go through this class, not be scattered in other modules
 - [app/database.py](app/database.py) — SQLAlchemy engine + `SessionLocal` + `get_db` dependency; connects via `mssql+pyodbc://` with a raw ODBC connection string
 - [app/dependencies/auth_dependency.py](app/dependencies/auth_dependency.py) — `get_current_user` FastAPI dependency; decodes the Bearer JWT and returns the payload dict
 
@@ -92,28 +97,29 @@ AZURE_OPENAI_EMBEDDING_MODEL=        # only when EMBEDDING_PROVIDER=azure
 
 - [app/ai/base.py](app/ai/base.py) — `BaseAILangchain` ABC; exposes `chat(system_prompt, user_prompt) → str` and `invoke(prompt) → str`. Add new providers by subclassing this.
 - [app/ai/factory.py](app/ai/factory.py) — `create_ai_langchain(ai_type)` factory; reads provider-specific keys from `settings`.
-- Concrete providers: `GeminiLangchain`, `AzureLangchain`, `LMStudioLangchain`, `OllamaLangchain`.
+- [app/ai/embedding_factory.py](app/ai/embedding_factory.py) — `get_embedding_function() → Embeddings`; currently supports `azure` only via `OpenAIEmbeddings`.
+- Concrete LLM providers: `GeminiLangchain`, `AzureLangchain`, `LMStudioLangchain`, `OllamaLangchain`.
 
-To add a new AI provider: subclass `BaseAILangchain`, add its `AiType` enum value in [app/enums/ai_type.py](app/enums/ai_type.py), wire it in the factory, and add the required env vars to `config.py`.
+To add a new LLM provider: subclass `BaseAILangchain`, add its `AiType` enum value in [app/enums/ai_type.py](app/enums/ai_type.py), wire it in the factory, and add the required env vars to `config.py`.
 
 ## RAG Pipeline
 
-The itinerary recommendation feature uses a Retrieval-Augmented Generation pipeline:
+The itinerary recommendation feature uses a Retrieval-Augmented Generation pipeline backed by **Qdrant Cloud**:
 
 1. **VipPromptService** — queries SQL to gather customer profile, booking, and stay notes.
-2. **ItineraryKnowledgeService** — loads a FAISS vector store from `VECTOR_DB_DIR`; runs `similarity_search_with_score` across five time-slot search plans (09:00, 11:00, 13:00, 15:00, 18:00); deduplicates by `place_name` within a day; fetches full item data from `dbo.ResortKnowledgeItem`.
-3. **prompt_builder** (`app/prompts/prompt_builder.py`) — assembles the system and user prompts from the retrieved context.
+2. **ItineraryKnowledgeService** — connects to a Qdrant Cloud collection via `QdrantVectorStore.from_existing_collection`; runs `similarity_search_with_score` across five time-slot search plans (09:00, 11:00, 13:00, 15:00, 18:00); deduplicates by `place_name` within a day; fetches full item data from `dbo.ResortKnowledgeItem` by `source_file`. Requires `QDRANT_URL`, `QDRANT_API_KEY`, and `QDRANT_COLLECTION_NAME` to be set — the service raises `ValueError` at init if any are missing.
+3. **prompt_builder** ([app/prompts/prompt_builder.py](app/prompts/prompt_builder.py)) — assembles the system and user prompts from the retrieved context.
 4. **create_ai_langchain** — calls the active LLM provider; response is expected JSON (possibly wrapped in ` ```json ``` ` fences), stripped in `CheckInService.parse_ai_json`.
 5. **ItineraryRecommendationService** — persists the parsed result to `dbo.VipItineraryRecommendation` and `dbo.VipItinerarySchedule` via raw SQL.
 
-Embedding is configured separately by `EMBEDDING_PROVIDER` (`huggingface` or `azure`). The FAISS index must exist at `VECTOR_DB_DIR` before calling the generate endpoint.
+Embedding uses Azure OpenAI (`EMBEDDING_PROVIDER=azure`). The Qdrant collection must be populated before calling the generate endpoint; there is no local index file — the vector store lives in Qdrant Cloud.
 
 ## Adding a New Module
 
-Follow the pattern of the existing `employee` module:
+Follow the pattern of the existing modules (e.g. `customer_service_request`):
 
 1. **Model** (`app/models/`) — SQLAlchemy `Base` subclass; map PascalCase columns explicitly.
 2. **Schema** (`app/schemas/`) — Pydantic models for request/response; use `ConfigDict(from_attributes=True)` on response schemas.
-3. **Service** (`app/services/`) — class taking `db: Session`; all business logic lives here.
-4. **Router** (`app/routers/`) — thin `APIRouter`; instantiates the service and delegates. Add `Depends(get_current_user)` on every endpoint that requires auth.
+3. **Service** (`app/services/`) — class taking `db: Session`; all business logic lives here. Export a module-level singleton instance (e.g. `customer_service_request_service = CustomerServiceRequestService()`) so routers can import it directly.
+4. **Router** (`app/routers/`) — thin `APIRouter`; imports the singleton service and delegates. Add `Depends(get_current_user)` on every endpoint that requires auth.
 5. Register in [app/main.py](app/main.py) with `app.include_router(..., prefix="/api/...", tags=[...])`.

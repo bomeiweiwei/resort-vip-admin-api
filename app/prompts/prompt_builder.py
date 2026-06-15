@@ -21,8 +21,8 @@ def build_vip_user_prompt(
     stay_notes: list,
     knowledge_context: str,
 ) -> str:
-    note_text = "\n".join(
-        f"- {note['NoteContent']}"
+    notes_text = "、".join(
+        f"{note['NoteType']}：{note['NoteContent']}"
         for note in stay_notes
     )
     return f"""
@@ -42,7 +42,7 @@ def build_vip_user_prompt(
 - 是否有停車：{data["has_parking"]}
 
 特殊備註：
-{note_text}
+{notes_text}
 
 渡假村知識庫候選資料：
 {knowledge_context}

@@ -6,7 +6,7 @@ from app.routers.employee_router import router as employee_router
 from app.routers.auth_router import router as auth_router
 from app.routers.checkin_router import router as checkin_router
 from app.routers.recommend_router import router as recommend_router
-
+from app.routers.customer_service_request_router import router as customer_service_request_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -45,6 +45,12 @@ app.include_router(
     recommend_router,
     prefix="/api/recommends",
     tags=["Recommends"],
+)
+
+app.include_router(
+    customer_service_request_router,
+    prefix="/api/customer-service-requests",
+    tags=["Customer Service Requests"],
 )
 
 
