@@ -45,3 +45,4 @@ class CheckInCreateResponse(BaseModel):
     vip_login_account: str
     vip_initial_password: str
     vip_login_url: str
+    vip_magic_login_url: str

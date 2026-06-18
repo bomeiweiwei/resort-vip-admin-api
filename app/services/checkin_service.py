@@ -23,6 +23,10 @@ from app.utils.date_helper import build_date_list
 from app.ai.factory import create_ai_langchain
 from app.config import settings
 
+from app.services.vip_login_token_service import (
+    VipLoginTokenService
+)
+
 class CheckInService:
     def __init__(self, db: Session):
         self.db = db
@@ -148,6 +152,13 @@ class CheckInService:
         self.db.add(vip_account)
         self.db.flush()
 
+        plain_token = (
+            VipLoginTokenService.create_token(
+                db=self.db,
+                customer_vip_account_id=vip_account.customer_vip_account_id,
+            )
+        )
+
         self.db.commit()
 
         return {
@@ -156,6 +167,7 @@ class CheckInService:
             "vip_login_account": vip_login_account,
             "vip_initial_password": vip_initial_password,
             "vip_login_url": f"{settings.VIP_FRONTEND_URL}/login",
+            "vip_magic_login_url": f"{settings.VIP_FRONTEND_URL}/vip-login?token={plain_token}",
         }
     
     def generate_recommendation(self, customer_id: str) -> dict:
