@@ -124,7 +124,7 @@ class ItineraryKnowledgeService:
             {
                 "time": "09:00",
                 "query": "適合早上開始的餐廳或早餐推薦，適合VIP客戶，交通方便",
-                "categories": ["餐廳美食"],
+                "categories": ["餐飲美食"],
                 "k": 3,
             },
             {
@@ -148,7 +148,7 @@ class ItineraryKnowledgeService:
             {
                 "time": "18:00",
                 "query": "適合晚上用餐的餐廳推薦，適合VIP客戶與家庭旅客",
-                "categories": ["餐廳美食"],
+                "categories": ["餐飲美食"],
                 "k": 3,
             },
         ]
