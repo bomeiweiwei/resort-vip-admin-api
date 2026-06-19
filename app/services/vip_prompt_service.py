@@ -26,6 +26,7 @@ class VipPromptService:
                 END AS age,
 
                 sc.CountryName AS country_name,
+                sc.CountryCode AS country_code,
 
                 DATEDIFF(DAY, bs.CheckInDate, bs.CheckOutDate) AS stay_days,
 

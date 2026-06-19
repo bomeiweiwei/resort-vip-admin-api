@@ -217,6 +217,16 @@ class CheckInService:
         # print("=== User Prompt ===")
         # print(user_prompt)
 
+        user_country_code=prompt_data["country_code"]
+        mapping = {
+            "TW": "zh-TW",
+            "US": "en",
+            "JP": "ja",
+            "KR": "ko",
+        }
+        language = mapping.get(user_country_code, "zh-TW")
+        # print("language:" + language)
+
         # 5. 呼叫 LLM
         ai_client = create_ai_langchain(settings.AI_PROVIDER)
 
@@ -234,6 +244,7 @@ class CheckInService:
             recommendation_service.save_recommendation(
                 customer_id=customer_id,
                 ai_result=ai_result,
+                language=language,
             )
         )
 
