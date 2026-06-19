@@ -23,6 +23,10 @@ from app.utils.date_helper import build_date_list
 from app.ai.factory import create_ai_langchain
 from app.config import settings
 
+from app.services.vip_login_token_service import (
+    VipLoginTokenService
+)
+
 class CheckInService:
     def __init__(self, db: Session):
         self.db = db
@@ -148,6 +152,13 @@ class CheckInService:
         self.db.add(vip_account)
         self.db.flush()
 
+        plain_token = (
+            VipLoginTokenService.create_token(
+                db=self.db,
+                customer_vip_account_id=vip_account.customer_vip_account_id,
+            )
+        )
+
         self.db.commit()
 
         return {
@@ -156,6 +167,7 @@ class CheckInService:
             "vip_login_account": vip_login_account,
             "vip_initial_password": vip_initial_password,
             "vip_login_url": f"{settings.VIP_FRONTEND_URL}/login",
+            "vip_magic_login_url": f"{settings.VIP_FRONTEND_URL}/vip-login?token={plain_token}",
         }
     
     def generate_recommendation(self, customer_id: str) -> dict:
@@ -205,6 +217,16 @@ class CheckInService:
         # print("=== User Prompt ===")
         # print(user_prompt)
 
+        user_country_code=prompt_data["country_code"]
+        mapping = {
+            "TW": "zh-TW",
+            "US": "en",
+            "JP": "ja",
+            "KR": "ko",
+        }
+        language = mapping.get(user_country_code, "zh-TW")
+        # print("language:" + language)
+
         # 5. 呼叫 LLM
         ai_client = create_ai_langchain(settings.AI_PROVIDER)
 
@@ -222,6 +244,7 @@ class CheckInService:
             recommendation_service.save_recommendation(
                 customer_id=customer_id,
                 ai_result=ai_result,
+                language=language,
             )
         )
 

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
+from sqlalchemy import Column, Unicode, Integer, String, Boolean, DateTime
 
 from app.database import Base
 
@@ -8,13 +8,13 @@ class Employee(Base):
     __table_args__ = {"schema": "dbo"}
 
     employee_id = Column("EmployeeId", Integer, primary_key=True, index=True)
-    employee_code = Column("EmployeeCode", String(20), nullable=False)
-    employee_name = Column("EmployeeName", String(50), nullable=False)
-    email = Column("Email", String(100), nullable=False)
-    password_hash = Column("PasswordHash", String(255), nullable=False)
+    employee_code = Column("EmployeeCode", Unicode(20), nullable=False)
+    employee_name = Column("EmployeeName", Unicode(50), nullable=False)
+    email = Column("Email", Unicode(100), nullable=False)
+    password_hash = Column("PasswordHash", Unicode(255), nullable=False)
 
-    role = Column("Role", String(30), nullable=False)
-    department = Column("Department", String(50), nullable=True)
+    role = Column("Role", Unicode(30), nullable=False)
+    department = Column("Department", Unicode(50), nullable=True)
 
     is_active = Column("IsActive", Boolean, nullable=False)
 

@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from app.services.nlp_service import nlp_service
 
 
 class ItineraryRecommendationService:
@@ -13,9 +14,15 @@ class ItineraryRecommendationService:
         self,
         customer_id: str,
         ai_result: dict,
+        language: str
     ) -> str:
 
         recommendation_id = str(uuid4())
+
+        summary_translated_reply = nlp_service.translate_reply(
+            text=ai_result.get("summary"),
+            target_language=language,
+        )
 
         self.db.execute(
             text("""
@@ -35,7 +42,7 @@ class ItineraryRecommendationService:
             {
                 "recommendation_id": recommendation_id,
                 "customer_id": customer_id,
-                "summary": ai_result.get("summary"),
+                "summary": summary_translated_reply,
             },
         )
 
@@ -44,6 +51,14 @@ class ItineraryRecommendationService:
             schedule_date = day["date"]
 
             for schedule in day.get("schedules", []):
+                title_translated_reply = nlp_service.translate_reply(
+                    text=schedule["title"],
+                    target_language=language,
+                )
+                content_translated_reply = nlp_service.translate_reply(
+                    text=schedule["content"],
+                    target_language=language,
+                )
 
                 self.db.execute(
                     text("""
@@ -72,8 +87,8 @@ class ItineraryRecommendationService:
                         "recommendation_id": recommendation_id,
                         "schedule_date": schedule_date,
                         "schedule_time": schedule["time"],
-                        "title": schedule["title"],
-                        "content": schedule["content"],
+                        "title": title_translated_reply,
+                        "content": content_translated_reply,
                         "preference": schedule.get("preference"),
                         "source_type": schedule.get("source_type"),
                     },

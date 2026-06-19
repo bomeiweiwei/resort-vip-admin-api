@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Unicode, Integer, String, Date, DateTime, Boolean, ForeignKey
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 
 from app.database import Base
@@ -17,7 +17,7 @@ class BookingStay(Base):
     adult_count = Column("AdultCount", Integer, nullable=False)
     child_count = Column("ChildCount", Integer, nullable=False)
     has_parking = Column("HasParking", Boolean, nullable=False)
-    license_plate_no = Column("LicensePlateNo", String(20), nullable=True)
+    license_plate_no = Column("LicensePlateNo", Unicode(20), nullable=True)
     created_at = Column("CreatedAt", DateTime, nullable=False)
     updated_at = Column("UpdatedAt", DateTime, nullable=False)
 
@@ -28,6 +28,6 @@ class BookingStayNote(Base):
 
     booking_stay_note_id = Column("BookingStayNoteId", UNIQUEIDENTIFIER, primary_key=True,server_default=text("NEWSEQUENTIALID()"))
     booking_stay_id = Column("BookingStayId", UNIQUEIDENTIFIER, ForeignKey("dbo.BookingStay.BookingStayId"))
-    note_type = Column("NoteType", String(50), nullable=True)
-    note_content = Column("NoteContent", String(500), nullable=False)
+    note_type = Column("NoteType", Unicode(50), nullable=True)
+    note_content = Column("NoteContent", Unicode(500), nullable=False)
     created_at = Column("CreatedAt", DateTime, nullable=False)
