@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, text
+from sqlalchemy import Column, Unicode, String, Boolean, DateTime, ForeignKey, text
 from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 
 from app.database import Base
@@ -22,8 +22,8 @@ class CustomerVipAccount(Base):
         nullable=False,
     )
 
-    login_account = Column("LoginAccount", String(10), nullable=False)
-    password_hash = Column("PasswordHash", String(255), nullable=False)
+    login_account = Column("LoginAccount", Unicode(10), nullable=False)
+    password_hash = Column("PasswordHash", Unicode(255), nullable=False)
 
     is_active = Column("IsActive", Boolean, nullable=False)
     expire_at = Column("ExpireAt", DateTime, nullable=False)
