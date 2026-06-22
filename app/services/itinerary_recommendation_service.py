@@ -19,6 +19,24 @@ class ItineraryRecommendationService:
 
         recommendation_id = str(uuid4())
 
+        # 先一次查出景點經緯度與地址
+        knowledge_items = self.db.execute(
+            text("""
+                SELECT
+                    PlaceName,
+                    Latitude,
+                    Longitude,
+                    Address
+                FROM ResortKnowledgeItem
+                WHERE IsActive = 1
+            """)
+        ).mappings().all()
+
+        knowledge_map = {
+            item["PlaceName"]: item
+            for item in knowledge_items
+        }
+
         summary_translated_reply = nlp_service.translate_reply(
             text=ai_result.get("summary"),
             target_language=language,
@@ -51,8 +69,17 @@ class ItineraryRecommendationService:
             schedule_date = day["date"]
 
             for schedule in day.get("schedules", []):
+                original_title = schedule["title"]
+
+                knowledge_item = knowledge_map.get(original_title)
+
+                # 如果找不到對應景點，給綠舞渡假村預設值，避免 NOT NULL 欄位寫入失敗
+                latitude = knowledge_item["Latitude"] if knowledge_item else 24.702904
+                longitude = knowledge_item["Longitude"] if knowledge_item else 121.818930
+                address = knowledge_item["Address"] if knowledge_item else "宜蘭縣五結鄉錦眾村五濱路二段459號"
+
                 title_translated_reply = nlp_service.translate_reply(
-                    text=schedule["title"],
+                    text=original_title,
                     target_language=language,
                 )
                 content_translated_reply = nlp_service.translate_reply(
@@ -70,7 +97,10 @@ class ItineraryRecommendationService:
                             Title,
                             Content,
                             Preference,
-                            SourceType
+                            SourceType,
+                            Latitude,
+                            Longitude,
+                            Address
                         )
                         VALUES
                         (
@@ -80,7 +110,10 @@ class ItineraryRecommendationService:
                             :title,
                             :content,
                             :preference,
-                            :source_type
+                            :source_type,
+                            :latitude,
+                            :longitude,
+                            :address
                         )
                     """),
                     {
@@ -91,6 +124,9 @@ class ItineraryRecommendationService:
                         "content": content_translated_reply,
                         "preference": schedule.get("preference"),
                         "source_type": schedule.get("source_type"),
+                        "latitude": latitude,
+                        "longitude": longitude,
+                        "address": address,
                     },
                 )
 
