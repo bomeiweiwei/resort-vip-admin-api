@@ -26,7 +26,8 @@ class ItineraryRecommendationService:
                     PlaceName,
                     Latitude,
                     Longitude,
-                    Address
+                    Address,
+                    PicUrl
                 FROM ResortKnowledgeItem
                 WHERE IsActive = 1
             """)
@@ -77,6 +78,7 @@ class ItineraryRecommendationService:
                 latitude = knowledge_item["Latitude"] if knowledge_item else 24.702904
                 longitude = knowledge_item["Longitude"] if knowledge_item else 121.818930
                 address = knowledge_item["Address"] if knowledge_item else "宜蘭縣五結鄉錦眾村五濱路二段459號"
+                picurl = knowledge_item["PicUrl"] if knowledge_item else "/static/images/empty.png"
 
                 title_translated_reply = nlp_service.translate_reply(
                     text=original_title,
@@ -100,7 +102,8 @@ class ItineraryRecommendationService:
                             SourceType,
                             Latitude,
                             Longitude,
-                            Address
+                            Address,
+                            PicUrl
                         )
                         VALUES
                         (
@@ -113,7 +116,8 @@ class ItineraryRecommendationService:
                             :source_type,
                             :latitude,
                             :longitude,
-                            :address
+                            :address,
+                            :picurl
                         )
                     """),
                     {
@@ -127,6 +131,7 @@ class ItineraryRecommendationService:
                         "latitude": latitude,
                         "longitude": longitude,
                         "address": address,
+                        "picurl": picurl
                     },
                 )
 
